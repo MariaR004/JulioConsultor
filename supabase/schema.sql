@@ -25,7 +25,7 @@ grant execute on function public.is_admin() to anon, authenticated;
 create table if not exists public.site_settings (
   id text primary key,
   whatsapp text not null default '556596052977',
-  phone text not null default '556636661989',
+  phone text not null default '556536661989',
   email text not null default 'julioimoveis1@hotmail.com',
   updated_at timestamptz not null default now(),
   constraint whatsapp_length_check check (char_length(whatsapp) between 10 and 20),
@@ -209,7 +209,7 @@ for each row
 execute function public.touch_updated_at();
 
 insert into public.site_settings (id, whatsapp, phone, email)
-values ('contact', '556596052977', '556636661989', 'julioimoveis1@hotmail.com')
+values ('contact', '556596052977', '556536661989', 'julioimoveis1@hotmail.com')
 on conflict (id) do nothing;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

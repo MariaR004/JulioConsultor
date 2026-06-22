@@ -403,7 +403,7 @@ describe("legacyWhatsappBase", () => {
   });
 
   it("mantém dígitos já limpos", () => {
-    const contact = { whatsapp: "556596052977", phone: "556636661989", email: "a@b.com" };
+    const contact = { whatsapp: "556596052977", phone: "556536661989", email: "a@b.com" };
     const url = legacyWhatsappBase(contact);
     expect(url).toBe("https://wa.me/556596052977");
   });

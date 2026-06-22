@@ -74,6 +74,6 @@ export function defaultWhatsappText() {
 
 export const DEFAULT_CONTACT: ContactSettings = {
   whatsapp: "556596052977",
-  phone: "556636661989",
+  phone: "556536661989",
   email: "julioimoveis1@hotmail.com"
 };

@@ -138,7 +138,7 @@ describe("QA Checklist Validation Tests", () => {
 
     it("should format phone numbers into Brazilian standards", () => {
       expect(formatPhone("556596052977")).toBe("(65) 9605-2977");
-      expect(formatPhone("556636661989")).toBe("(66) 3666-1989");
+      expect(formatPhone("556536661989")).toBe("(65) 3666-1989");
     });
 
     it("should build correct WhatsApp redirect URL with message parameter encoded", () => {
@@ -229,7 +229,7 @@ describe("QA Checklist Validation Tests", () => {
 
       const data = toPublicHomeData(mockProps, {
         whatsapp: "556596052977",
-        phone: "556636661989",
+        phone: "556536661989",
         email: "julioimoveis1@hotmail.com"
       });
 
