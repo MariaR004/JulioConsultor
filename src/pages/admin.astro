@@ -1,0 +1,616 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import PasswordToggle from "@/components/PasswordToggle.astro";
+import { AUTH_CAPTCHA_PROVIDER, AUTH_CAPTCHA_SITE_KEY } from "@/lib/env";
+import { getAdminSession } from "@/lib/server/adminAuth";
+
+export const prerender = false;
+
+const isAdmin = Boolean(await getAdminSession(Astro, { required: false }));
+---
+
+<AdminLayout title="Admin - Júlio Imóveis">
+  <section class:list={["admin-login", { "is-hidden": isAdmin }]} id="loginScreen">
+    <form class="login-card" id="loginForm">
+      <span class="admin-kicker">Área administrativa</span>
+      <h1>Júlio Imóveis</h1>
+      <p>Digite seu e-mail e senha para gerenciar imóveis, destaque e contatos do site.</p>
+      <label for="adminEmail">E-mail</label>
+      <input
+        type="email"
+        id="adminEmail"
+        autocomplete="username"
+        placeholder="Digite seu e-mail"
+        required
+      />
+      <label for="adminPassword" style="margin-top: 15px;">Senha</label>
+      <div class="password-input">
+        <input
+          type="password"
+          id="adminPassword"
+          autocomplete="current-password"
+          placeholder="Digite a senha"
+          required
+        />
+        <PasswordToggle />
+      </div>
+      {
+        AUTH_CAPTCHA_SITE_KEY && (
+          <div
+            class="admin-captcha"
+            id="adminCaptcha"
+            data-provider={AUTH_CAPTCHA_PROVIDER}
+            data-site-key={AUTH_CAPTCHA_SITE_KEY}
+            aria-label="Verificacao anti-robo"
+          />
+        )
+      }
+      <button class="btn btn-primary btn-block login-submit" id="loginSubmitBtn" type="submit"
+        >Entrar</button
+      >
+      <span class="admin-error" id="loginError" aria-live="polite"></span>
+    </form>
+  </section>
+  <>
+    <div class="admin-sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <div class="admin-shell is-hidden" id="adminApp">
+      <aside class="admin-sidebar" id="adminSidebar">
+        <div class="sidebar-brand-wrapper">
+          <a class="admin-brand" href="/" aria-label="Voltar para o site">
+            <img src="/img/logo-nova-sem-fundo.png" alt="Júlio Imóveis" class="admin-logo-img" />
+          </a>
+          <button class="menu-close-btn" type="button" id="menuCloseBtn" aria-label="Fechar menu"
+            >&times;</button
+          >
+        </div>
+
+        <nav class="admin-tabs" aria-label="Administração">
+          <button class="admin-tab active" type="button" data-tab="properties">
+            <svg
+              class="tab-icon"
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+            >
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            <span>Imóveis</span>
+          </button>
+          <button class="admin-tab" type="button" data-tab="settings">
+            <svg
+              class="tab-icon"
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+            >
+              <circle cx="12" cy="12" r="3"></circle>
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.1-.4H2a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 3.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 3.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .4-1.1V2a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 3.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 8c.22.38.6.66 1 .6h.1a2 2 0 1 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"
+              ></path>
+            </svg>
+            <span>Configurações</span>
+          </button>
+        </nav>
+
+        <div class="admin-side-actions">
+          <a class="btn btn-outline-admin" href="/">
+            <svg
+              class="action-icon"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path
+                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+              ></path>
+            </svg>
+            <span>Ver site</span>
+          </a>
+          <button class="btn btn-ghost-admin" type="button" id="logoutBtn">
+            <svg
+              class="action-icon"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Sair</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="admin-main">
+        <header class="admin-topbar">
+          <div class="topbar-left">
+            <button
+              class="menu-toggle-btn"
+              type="button"
+              id="menuToggleBtn"
+              aria-label="Abrir menu"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                fill="none"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
+            <div>
+              <h1>Painel administrativo</h1>
+            </div>
+          </div>
+          <button class="btn btn-primary" type="button" id="newPropertyBtn">Novo imóvel</button>
+        </header>
+
+        <section class="admin-panel active" id="tab-properties">
+          <div class="panel-head">
+            <div>
+              <h2>Imóveis cadastrados</h2>
+              <p>Edite, remova ou escolha o destaque principal.</p>
+            </div>
+            <span class="count-pill" id="propertyCount">0 imóveis</span>
+          </div>
+          <div class="admin-property-list" id="propertyList"></div>
+        </section>
+
+        <section class="admin-panel" id="tab-editor">
+          <div class="panel-head editor-head">
+            <button
+              class="panel-back-btn"
+              type="button"
+              id="editorBackBtn"
+              aria-label="Voltar para a lista de imóveis"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="22"
+                height="22"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                fill="none"
+              >
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+            </button>
+            <div>
+              <h2 id="formTitle">Adicionar imóvel</h2>
+              <p>Preencha os dados principais. A primeira foto será usada como capa.</p>
+            </div>
+          </div>
+
+          <div class="editor-grid">
+            <form class="admin-form" id="propertyForm" novalidate>
+              <input type="hidden" id="propertyId" />
+
+              <div class="form-section">
+                <h3>Dados principais</h3>
+                <div class="field-grid">
+                  <label class="admin-field"
+                    ><span>Título</span><input type="text" id="propertyTitle" required /></label
+                  >
+                  <div class="admin-field">
+                    <span>Tipo</span>
+                    <input type="hidden" id="propertyType" value="Venda" />
+                    <div class="type-toggle" role="group" aria-label="Tipo de negócio">
+                      <button class="type-option active" type="button" data-type-value="Venda"
+                        >Venda</button
+                      >
+                      <button class="type-option" type="button" data-type-value="Aluguel"
+                        >Aluguel</button
+                      >
+                    </div>
+                  </div>
+                  <label class="admin-field"
+                    ><span>Valor</span><input
+                      type="text"
+                      id="propertyPrice"
+                      placeholder="R$ 580.000"
+                      required
+                    /></label
+                  >
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3>Endereço</h3>
+                <div class="address-split-layout">
+                  <div class="field-grid address-grid">
+                    <label class="admin-field address-uf"
+                      ><span>UF</span><input
+                        type="text"
+                        id="propertyState"
+                        maxlength="2"
+                        value="MT"
+                        required
+                      /></label
+                    >
+                    <label class="admin-field address-city"
+                      ><span>Cidade</span><input
+                        type="text"
+                        id="propertyCity"
+                        value="Cuiabá"
+                        required
+                      /></label
+                    >
+                    <label class="admin-field address-neighborhood"
+                      ><span>Bairro</span><input
+                        type="text"
+                        id="propertyNeighborhood"
+                        required
+                      /></label
+                    >
+                    <label class="admin-field address-street"
+                      ><span>Rua</span><input type="text" id="propertyStreet" /></label
+                    >
+                    <label class="admin-field address-number compact-address-field"
+                      ><span>Número</span><input type="text" id="propertyNumber" /></label
+                    >
+                    <label class="admin-field address-cep compact-address-field"
+                      ><span>CEP</span><input type="text" id="propertyPostalCode" /></label
+                    >
+                  </div>
+                  <div class="admin-map-picker" id="adminMapPicker">
+                    <div class="admin-map-inner">
+                      <iframe
+                        id="adminMapFrame"
+                        title="Mapa do imóvel"
+                        loading="lazy"
+                        allowfullscreen
+                        referrerpolicy="no-referrer-when-downgrade"></iframe>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3>Medidas e cômodos</h3>
+                <div class="field-grid four-cols">
+                  <label class="admin-field"
+                    ><span>Quartos</span><input
+                      type="number"
+                      id="propertyBeds"
+                      min="0"
+                      value="0"
+                    /></label
+                  >
+                  <label class="admin-field"
+                    ><span>Suítes</span><input
+                      type="number"
+                      id="propertySuites"
+                      min="0"
+                      value="0"
+                    /></label
+                  >
+                  <label class="admin-field"
+                    ><span>Banheiros</span><input
+                      type="number"
+                      id="propertyBaths"
+                      min="0"
+                      value="0"
+                    /></label
+                  >
+                  <label class="admin-field"
+                    ><span>Vagas na garagem</span><input
+                      type="number"
+                      id="propertyParking"
+                      min="0"
+                      value="0"
+                    /></label
+                  >
+                  <label class="admin-field"
+                    ><span>Área (m²)</span><input
+                      type="number"
+                      id="propertyArea"
+                      min="0"
+                      value="0"
+                    /></label
+                  >
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3>Descrição e características</h3>
+                <label class="admin-field"
+                  ><span>Descrição do imóvel</span><textarea id="propertyDescription" rows="5"
+                  ></textarea></label
+                >
+                <div class="admin-field">
+                  <span>Características</span>
+                  <div class="feature-checks" id="featureChecks"></div>
+                </div>
+                <label class="admin-field solar-field solar-collapsed" id="solarField">
+                  <span class="solar-field-inner">
+                    <span>Geração do painel solar (kWh/mês)</span>
+                    <input type="number" id="propertySolarKwh" min="0" step="1" />
+                  </span>
+                </label>
+                <label class="check-row"
+                  ><input type="checkbox" id="propertyFeatured" />
+                  <span>Marcar como imóvel destaque</span></label
+                >
+              </div>
+
+              <div class="form-section">
+                <h3>Fotos</h3>
+                <label class="upload-box" for="photoInput">
+                  <input type="file" id="photoInput" accept="image/*" multiple />
+                  <strong>Selecionar fotos</strong>
+                  <span>Ate 12 fotos por imovel; o site gera versoes leves automaticamente.</span>
+                </label>
+                <div class="photo-list" id="photoList"></div>
+              </div>
+
+              <div class="form-actions">
+                <button class="btn btn-primary" type="submit" id="propertySubmitBtn">
+                  Salvar imóvel
+                </button>
+                <button class="btn btn-ghost-admin" type="button" id="cancelEditBtn"
+                  >Cancelar edição</button
+                >
+              </div>
+              <span class="admin-error" id="formError" aria-live="polite"></span>
+            </form>
+
+            <aside class="preview-panel">
+              <h3>Preview</h3>
+              <article class="admin-preview" id="propertyPreview"></article>
+            </aside>
+          </div>
+        </section>
+
+        <section class="admin-panel" id="tab-settings">
+          <div class="panel-head">
+            <div>
+              <h2>Configurações</h2>
+              <p>Monitore o uso do Supabase e atualize os dados exibidos no site.</p>
+            </div>
+          </div>
+
+          <div class="settings-grid">
+            <section class="settings-card">
+              <div class="settings-card-head">
+                <div>
+                  <h3>Uso do Supabase</h3>
+                  <p>Indicadores do plano gratuito para banco de dados e bucket de fotos.</p>
+                </div>
+                <button class="action-btn" type="button" id="refreshUsageBtn">Atualizar</button>
+              </div>
+              <div class="usage-grid">
+                <article class="usage-card" id="databaseUsageCard">
+                  <div class="usage-card-head">
+                    <span class="usage-icon">
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="22"
+                        height="22"
+                        stroke="currentColor"
+                        stroke-width="2.4"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        fill="none"
+                      >
+                        <ellipse cx="12" cy="5" rx="8" ry="3"></ellipse>
+                        <path d="M4 5v10c0 1.66 3.58 3 8 3s8-1.34 8-3V5"></path>
+                        <path d="M4 10c0 1.66 3.58 3 8 3s8-1.34 8-3"></path>
+                      </svg>
+                    </span>
+                    <div>
+                      <strong>Banco de dados</strong>
+                      <span id="databaseUsageLabel">Carregando...</span>
+                    </div>
+                  </div>
+                  <div class="usage-meter" aria-hidden="true">
+                    <span id="databaseUsageBar"></span>
+                  </div>
+                  <p id="databaseUsageMeta">Aguardando leitura.</p>
+                </article>
+
+                <article class="usage-card" id="bucketUsageCard">
+                  <div class="usage-card-head">
+                    <span class="usage-icon">
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="22"
+                        height="22"
+                        stroke="currentColor"
+                        stroke-width="2.4"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        fill="none"
+                      >
+                        <path d="M4 6h16l-1.4 14H5.4L4 6z"></path>
+                        <path d="M8 6V4h8v2"></path>
+                        <path d="M8 11h8"></path>
+                      </svg>
+                    </span>
+                    <div>
+                      <strong>Bucket de fotos</strong>
+                      <span id="bucketUsageLabel">Carregando...</span>
+                    </div>
+                  </div>
+                  <div class="usage-meter" aria-hidden="true">
+                    <span id="bucketUsageBar"></span>
+                  </div>
+                  <p id="bucketUsageMeta">Aguardando leitura.</p>
+                </article>
+              </div>
+              <span class="admin-error" id="usageStatus" aria-live="polite"></span>
+            </section>
+
+            <section class="settings-card">
+              <h3>Contato do site</h3>
+              <form class="admin-form compact" id="contactFormAdmin" novalidate>
+                <label class="admin-field"
+                  ><span>WhatsApp</span><input
+                    type="text"
+                    id="contactWhatsappInput"
+                    inputmode="numeric"
+                  /></label
+                >
+                <label class="admin-field"
+                  ><span>Telefone fixo</span><input
+                    type="text"
+                    id="contactPhoneInput"
+                    inputmode="numeric"
+                  /></label
+                >
+                <label class="admin-field"
+                  ><span>E-mail</span><input type="email" id="contactEmailInput" /></label
+                >
+                <button class="btn btn-primary" id="contactSubmitBtn" type="submit"
+                  >Salvar contato</button
+                >
+                <span class="admin-error" id="contactStatus" aria-live="polite"></span>
+              </form>
+            </section>
+
+            <section class="settings-card">
+              <h3>Alterar senha</h3>
+              <form class="admin-form compact" id="passwordFormAdmin" novalidate>
+                <label class="admin-field">
+                  <span>Senha atual</span>
+                  <div class="password-input">
+                    <input
+                      type="password"
+                      id="currentPassword"
+                      autocomplete="current-password"
+                      required
+                    />
+                    <PasswordToggle />
+                  </div>
+                </label>
+                <label class="admin-field">
+                  <span>Nova senha</span>
+                  <div class="password-input">
+                    <input type="password" id="newPassword" autocomplete="new-password" required />
+                    <PasswordToggle />
+                  </div>
+                </label>
+                <label class="admin-field">
+                  <span>Confirmar nova senha</span>
+                  <div class="password-input">
+                    <input
+                      type="password"
+                      id="confirmPassword"
+                      autocomplete="new-password"
+                      required
+                    />
+                    <PasswordToggle />
+                  </div>
+                </label>
+                <p class="password-req-title">A nova senha deve conter:</p>
+                <ul class="password-requirements" id="passwordRequirements" aria-live="polite"></ul>
+                {
+                  AUTH_CAPTCHA_SITE_KEY && (
+                    <div
+                      class="admin-captcha"
+                      id="passwordCaptcha"
+                      data-provider={AUTH_CAPTCHA_PROVIDER}
+                      data-site-key={AUTH_CAPTCHA_SITE_KEY}
+                      aria-label="Verificacao anti-robo"
+                    />
+                  )
+                }
+                <button class="btn btn-primary" id="passwordSubmitBtn" type="submit"
+                  >Alterar senha</button
+                >
+                <span class="admin-error" id="passwordStatus" aria-live="polite"></span>
+              </form>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="admin-modal is-hidden" id="featureModal">
+      <div class="admin-modal-backdrop" data-feature-modal-close></div>
+      <div
+        class="admin-modal-card feature-modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="featureModalTitle"
+      >
+        <button class="admin-modal-close" type="button" data-feature-modal-close aria-label="Fechar"
+          >&times;</button
+        >
+        <h2 id="featureModalTitle">Características cadastradas</h2>
+        <p>Remova opções que não devem aparecer no cadastro ou adicione uma nova característica.</p>
+        <div class="feature-modal-list" id="featureModalList"></div>
+        <div class="feature-modal-add">
+          <label class="admin-field">
+            <span>Nova característica</span>
+            <input type="text" id="featureModalInput" />
+          </label>
+          <button class="btn btn-primary" type="button" id="featureModalAddBtn">Adicionar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-modal is-hidden" id="confirmModal">
+      <div class="admin-modal-backdrop" data-confirm-action="cancel"></div>
+      <div
+        class="admin-modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirmModalTitle"
+      >
+        <span class="modal-icon danger">!</span>
+        <h2 id="confirmModalTitle">Confirmar ação</h2>
+        <p id="confirmModalText">Esta ação não pode ser desfeita.</p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost-admin" type="button" data-confirm-action="cancel"
+            >Cancelar</button
+          >
+          <button
+            class="btn btn-danger-admin"
+            type="button"
+            id="confirmModalConfirm"
+            data-confirm-action="confirm">Confirmar</button
+          >
+        </div>
+      </div>
+    </div>
+  </>
+
+  <div class="admin-toast" id="adminToast" aria-live="polite"></div>
+  <script>
+    import "../scripts/admin/index";
+  </script>
+</AdminLayout>

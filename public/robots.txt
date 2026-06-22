@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+
+# Atualize o domínio aqui (e em `site` no astro.config.mjs) ao migrar para domínio próprio.
+Sitemap: https://julioconsultor.com.br/sitemap.xml

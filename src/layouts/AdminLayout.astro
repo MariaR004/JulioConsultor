@@ -1,0 +1,26 @@
+---
+import "@/styles/admin.css";
+
+type Props = {
+  title?: string;
+  noindex?: boolean;
+  bodyClass?: string;
+};
+
+const { title = "Admin — Júlio Imóveis", noindex = true, bodyClass = "admin-body" } = Astro.props;
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <meta name="theme-color" content="#E63329" />
+    <link rel="icon" type="image/png" href="/img/favicon-64.png" />
+    <title>{title}</title>
+  </head>
+  <body class={bodyClass}>
+    <slot />
+  </body>
+</html>

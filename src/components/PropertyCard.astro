@@ -1,0 +1,407 @@
+---
+import type { LegacyProperty } from "@/lib/viewModel";
+import type { ContactSettings } from "@/types";
+import { legacyWhatsappBase } from "@/lib/viewModel";
+
+type Props = {
+  property: LegacyProperty;
+  contact: ContactSettings;
+  index: number;
+};
+
+const { property, contact, index } = Astro.props;
+const photos = property.photoCards || property.photos || [];
+const thumbs = property.photoThumbs || photos;
+const hasGallery = photos.length > 1;
+const tagClass = property.type === "Aluguel" ? "aluguel" : "venda";
+const waMsg = encodeURIComponent(
+  `Olá Júlio, vi seu site e tenho interesse no imóvel: ${property.title} (${property.location}). Pode me passar mais informações?`
+);
+---
+
+<article
+  class="property-card reveal clickable-card"
+  data-property-id={property.id}
+  style={`--delay: ${(index % 3) * 0.08}s`}
+>
+  <a
+    href={`/imovel/${property.slug}`}
+    class="pc-overlay-link"
+    aria-label={`Ver detalhes de ${property.title}`}></a>
+  <div class:list={["pc-media", { placeholder: !photos.length }]}>
+    {
+      photos.length > 0 && (
+        <div class="pc-carousel-track" style="transform: translateX(0%);">
+          {photos.map((photo, photoIndex) => (
+            <div class="pc-carousel-slide">
+              {photoIndex === 0 ? (
+                <img
+                  src={photo}
+                  srcset={`${thumbs[photoIndex] || photo} 320w, ${photo} 800w`}
+                  sizes="(max-width: 760px) 100vw, 420px"
+                  alt={property.title}
+                  loading="lazy"
+                />
+              ) : (
+                <img
+                  data-src={photo}
+                  data-srcset={`${thumbs[photoIndex] || photo} 320w, ${photo} 800w`}
+                  sizes="(max-width: 760px) 100vw, 420px"
+                  alt={property.title}
+                  loading="lazy"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )
+    }
+    <span class:list={["pc-tag", tagClass]}>{property.type}</span>
+    {
+      hasGallery && (
+        <>
+          <button
+            class="pc-photo-btn prev"
+            type="button"
+            data-photo-action="prev"
+            aria-label="Foto anterior"
+          >
+            &lsaquo;
+          </button>
+          <button
+            class="pc-photo-btn next"
+            type="button"
+            data-photo-action="next"
+            aria-label="Próxima foto"
+          >
+            &rsaquo;
+          </button>
+          <span class="pc-photo-count">1 / {photos.length}</span>
+        </>
+      )
+    }
+  </div>
+  <div class="pc-body">
+    <h3 class="pc-title">{property.title}</h3>
+    <p class="pc-location">
+      <svg class="ico" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"
+        ><path
+          fill="currentColor"
+          d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"
+        ></path></svg
+      >
+      {property.location}
+    </p>
+    <div class="pc-specs">
+      <span>
+        <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"
+          ><path
+            fill="currentColor"
+            d="M21 10V7a2 2 0 0 0-2-2h-5v3h-4V5H5a2 2 0 0 0-2 2v3a3 3 0 0 0 0 6v3h2v-2h14v2h2v-3a3 3 0 0 0 0-6Z"
+          ></path></svg
+        >
+        {property.beds} quartos {
+          property.suites > 0 &&
+            `(${property.suites} ${property.suites === 1 ? "suíte" : "suítes"})`
+        }
+      </span>
+      <span>
+        <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"
+          ><path
+            fill="currentColor"
+            d="M7 4a3 3 0 0 0-3 3v5H3a1 1 0 0 0 0 2h1v1a4 4 0 0 0 2 3.46V20a1 1 0 0 0 2 0v-1h8v1a1 1 0 0 0 2 0v-1.54A4 4 0 0 0 20 15v-1h1a1 1 0 0 0 0-2h-9V7a1 1 0 0 1 2 0 1 1 0 0 0 2 0 3 3 0 0 0-6 0v5H6V7a1 1 0 0 1 1-1 1 1 0 0 0 0-2Z"
+          ></path></svg
+        >
+        {property.baths} banh.
+      </span>
+      <span>
+        <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"
+          ><path
+            fill="currentColor"
+            d="M5 11 6.5 6.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h1a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-1v1a1 1 0 0 1-2 0v-1H7v1a1 1 0 0 1-2 0v-1H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h1Zm2.2 0h9.6l-1-3H8.2l-1 3Z"
+          ></path></svg
+        >
+        {property.parking} vagas
+      </span>
+      <span>
+        <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"
+          ><path fill="currentColor" d="M3 3h8v8H3V3Zm10 0h8v8h-8V3ZM3 13h8v8H3v-8Zm10 0h8v8h-8v-8Z"
+          ></path></svg
+        >
+        {property.area} m²
+      </span>
+    </div>
+    <div class="pc-footer">
+      <span class="pc-price">{property.price}<small>{property.type}</small></span>
+      <a
+        class="btn btn-whatsapp btn-sm"
+        href={`${legacyWhatsappBase(contact)}?text=${waMsg}`}
+        target="_blank"
+        rel="noopener"
+        aria-label={`Falar no WhatsApp sobre ${property.title}`}
+      >
+        <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"
+          ><path
+            fill="currentColor"
+            d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Z"
+          ></path></svg
+        >
+        Interesse
+      </a>
+    </div>
+  </div>
+</article>
+
+<style>
+  .property-card {
+    position: relative;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    transition:
+      transform var(--transition),
+      box-shadow var(--transition);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .property-card.clickable-card {
+    cursor: pointer;
+  }
+
+  .property-card.clickable-card:focus-visible {
+    outline: 3px solid var(--blue);
+    outline-offset: 4px;
+  }
+
+  .property-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .pc-media {
+    position: relative;
+    aspect-ratio: 16 / 11;
+    overflow: hidden;
+  }
+
+  .pc-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.55s ease;
+  }
+
+  .property-card:hover .pc-media img {
+    transform: scale(1.07);
+  }
+
+  .pc-carousel-track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .pc-carousel-slide {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .pc-media.placeholder {
+    background: linear-gradient(135deg, var(--blue), var(--blue-deep));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pc-media.placeholder::after {
+    content: "";
+    width: 64px;
+    height: 56px;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3 2 11h3v9h6v-6h2v6h6v-9h3L12 3Z'/%3E%3C/svg%3E")
+      center/contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3 2 11h3v9h6v-6h2v6h6v-9h3L12 3Z'/%3E%3C/svg%3E")
+      center/contain no-repeat;
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  .pc-tag {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    font-family: var(--ff-head);
+    font-weight: 700;
+    font-size: 0.76rem;
+    padding: 6px 14px;
+    border-radius: 999px;
+    color: var(--white);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .pc-tag.venda {
+    background: var(--red);
+  }
+
+  .pc-tag.aluguel {
+    background: var(--blue);
+  }
+
+  .pc-photo-btn {
+    position: absolute;
+    top: 50%;
+    z-index: 4;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(12, 19, 34, 0.72);
+    color: var(--white);
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition:
+      opacity var(--transition),
+      background var(--transition);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .pc-photo-btn.prev {
+    left: 12px;
+  }
+
+  .pc-photo-btn.next {
+    right: 12px;
+  }
+
+  .property-card:hover .pc-photo-btn,
+  .pc-photo-btn:focus-visible {
+    opacity: 1;
+  }
+
+  /* Em telas de toque não existe hover: as setas precisam ficar sempre visíveis */
+  @media (hover: none) {
+    .pc-photo-btn {
+      opacity: 1;
+    }
+  }
+
+  .pc-photo-btn:hover {
+    background: rgba(12, 19, 34, 0.9);
+  }
+
+  .pc-photo-count {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    z-index: 2;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: rgba(12, 19, 34, 0.74);
+    color: var(--white);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .pc-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .pc-title {
+    font-size: 1.18rem;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+
+  .pc-location {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0 0 14px;
+  }
+
+  .pc-location svg {
+    color: var(--red);
+    flex: 0 0 auto;
+  }
+
+  .pc-specs {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px 0;
+    margin-bottom: 16px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.88rem;
+  }
+
+  .pc-specs span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pc-specs svg {
+    color: var(--blue);
+  }
+
+  .pc-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+  }
+
+  .pc-price {
+    font-family: var(--ff-head);
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--blue-deep);
+  }
+
+  .pc-price small {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .pc-overlay-link {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    color: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .pc-footer .btn {
+    position: relative;
+    z-index: 2;
+  }
+
+  @media (max-width: 576px) {
+    .pc-body {
+      padding: 16px;
+    }
+
+    .pc-title {
+      font-size: 1.05rem;
+    }
+  }
+</style>

@@ -1,0 +1,162 @@
+/* Compatibility layer for the Astro/Supabase implementation — public pages only. */
+/* Admin-specific overrides are in admin-overrides.css */
+
+.is-hidden,
+[hidden] {
+  display: none !important;
+}
+
+.site-header .brand img.brand-logo-img,
+.site-footer .brand img.brand-logo-img,
+.admin-logo-img,
+.broker-logo {
+  object-fit: contain;
+}
+
+.header-inner,
+.site-header .brand,
+.main-nav,
+.hero-content,
+.hero-title,
+.hero-text,
+.hero-trust,
+.property-main-info,
+.property-main-info *,
+.sticky-contact-card {
+  min-width: 0;
+}
+
+.hero-title,
+.hero-text,
+.hero-trust span,
+.info-header h1,
+.property-breadcrumbs,
+.card-price {
+  overflow-wrap: break-word;
+}
+
+.pm-main-photo,
+.pc-media,
+.featured-media {
+  background-color: var(--offwhite);
+}
+
+.field.full {
+  grid-column: 1 / -1;
+}
+
+.status-inline {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+@keyframes public-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-card {
+  pointer-events: none;
+}
+
+.skeleton-image,
+.skeleton-line {
+  background: linear-gradient(90deg, #f7f5f2 25%, #eae6e0 50%, #f7f5f2 75%);
+  background-size: 200% 100%;
+  animation: public-shimmer 1.45s linear infinite;
+}
+
+.property-card.skeleton-card {
+  min-height: 430px;
+}
+
+.property-card.skeleton-card .skeleton-image {
+  width: 100%;
+  aspect-ratio: 16 / 11;
+}
+
+.featured-media.skeleton-card {
+  min-height: 420px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.featured-media.skeleton-card .skeleton-image {
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+}
+
+.skeleton-line {
+  height: 14px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+}
+
+.skeleton-title {
+  width: 68%;
+  height: 22px;
+}
+
+.skeleton-text {
+  width: 48%;
+}
+
+.skeleton-footer {
+  width: 82%;
+  height: 24px;
+  margin-top: 16px;
+}
+
+.error-state-card {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 260px;
+  padding: 34px 24px;
+  border: 1px dashed rgba(230, 51, 41, 0.65);
+  border-radius: var(--radius);
+  background: #fff8f8;
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.featured-grid > .error-state-card {
+  grid-column: 1 / -1;
+}
+
+.error-state-card .error-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(230, 51, 41, 0.18);
+  border-radius: 50%;
+  background: #ffebeb;
+  color: var(--red);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.error-state-card strong {
+  font-family: var(--ff-head);
+  font-size: 1.18rem;
+  color: var(--blue-deep);
+  margin-bottom: 8px;
+}
+
+.error-state-card p {
+  max-width: 440px;
+  margin: 0 0 20px;
+  color: var(--muted);
+}

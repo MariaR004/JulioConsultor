@@ -1,0 +1,117 @@
+---
+import "@/styles/public.css";
+import { SITE_ORIGIN } from "@/lib/env";
+import { safeJsonScript } from "@/lib/safeJson";
+
+type PreloadImageObject = {
+  href: string;
+  srcset?: string;
+  sizes?: string;
+  type?: string;
+  fetchPriority?: "high" | "low" | "auto";
+};
+
+type Props = {
+  title?: string;
+  description?: string;
+  noindex?: boolean;
+  bodyClass?: string;
+  ogImage?: string;
+  ogImageWidth?: number | null;
+  ogImageHeight?: number | null;
+  preloadImage?: string | PreloadImageObject;
+  jsonLd?: unknown | unknown[];
+};
+
+const {
+  title = "Júlio Consultor Imobiliário | Cuiabá e região",
+  description = "Compra, venda e aluguel de imóveis em Cuiabá e região com atendimento direto pelo WhatsApp.",
+  noindex = false,
+  bodyClass = "",
+  ogImage = "/img/og-julio.jpg",
+  ogImageWidth = 1024,
+  ogImageHeight = 1024,
+  preloadImage,
+  jsonLd
+} = Astro.props;
+
+// Origem usada para montar URLs absolutas (exigidas por scrapers de redes sociais).
+// Vem do `site` em astro.config.mjs; ajuste lá ao migrar para domínio próprio.
+const siteOrigin = Astro.site ?? new URL(SITE_ORIGIN);
+const ogImageUrl = new URL(ogImage, siteOrigin).toString();
+const canonicalUrl = new URL(Astro.url.pathname, siteOrigin).toString();
+const jsonLdItems = (Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : []).filter(
+  (item) => item !== null && item !== undefined
+);
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="canonical" href={canonicalUrl} />
+    <meta name="theme-color" content="#0d47a1" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImageUrl} />
+    {ogImageWidth && <meta property="og:image:width" content={String(ogImageWidth)} />}
+    {ogImageHeight && <meta property="og:image:height" content={String(ogImageHeight)} />}
+    <meta property="og:image:alt" content="Júlio Consultor Imobiliário" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
+    {
+      preloadImage &&
+        (typeof preloadImage === "string" ? (
+          <link rel="preload" as="image" href={preloadImage} fetchpriority="high" />
+        ) : (
+          <link
+            rel="preload"
+            as="image"
+            href={preloadImage.href}
+            imagesrcset={preloadImage.srcset}
+            imagesizes={preloadImage.sizes}
+            type={preloadImage.type}
+            fetchpriority={preloadImage.fetchPriority || "high"}
+          />
+        ))
+    }
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script is:inline>
+      // Evitar FOUT (Flash of Unstyled Text)
+      (function () {
+        if (!("fonts" in document)) return;
+        document.documentElement.classList.add("fonts-loading");
+        const timeout = setTimeout(function () {
+          document.documentElement.classList.remove("fonts-loading");
+        }, 800);
+        document.fonts.ready.then(function () {
+          clearTimeout(timeout);
+          document.documentElement.classList.remove("fonts-loading");
+          document.documentElement.classList.add("fonts-loaded");
+        });
+      })();
+    </script>
+    <link rel="icon" type="image/png" href="/img/favicon-64.png" />
+    {
+      jsonLdItems.map((item) => (
+        <script type="application/ld+json" is:inline set:html={safeJsonScript(item)} />
+      ))
+    }
+    <title>{title}</title>
+  </head>
+  <body class={bodyClass}>
+    <slot />
+  </body>
+</html>

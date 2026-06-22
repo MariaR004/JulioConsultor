@@ -1,0 +1,315 @@
+---
+import type { ContactSettings } from "@/types";
+import { DEFAULT_CONTACT, cleanPhone, defaultWhatsappText, formatPhone } from "@/lib/format";
+import { legacyWhatsappBase } from "@/lib/viewModel";
+
+type Props = {
+  contact?: ContactSettings;
+};
+
+const { contact } = Astro.props;
+const c = contact ?? DEFAULT_CONTACT;
+const year = new Date().getFullYear();
+
+const waHref = `${legacyWhatsappBase(c)}?text=${encodeURIComponent(defaultWhatsappText())}`;
+const telHref = `tel:+${cleanPhone(c.phone)}`;
+const mailHref = `mailto:${c.email}`;
+const phoneText = formatPhone(c.phone);
+const whatsappText = formatPhone(c.whatsapp);
+---
+
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <div class="brand">
+        <img
+          src="/img/logo-nova-sem-fundo.png"
+          alt="Júlio Consultor Imobiliário"
+          class="brand-logo-img"
+        />
+      </div>
+      <p class="footer-slogan">A chave dos bons negócios.</p>
+      <div class="social">
+        <a href={waHref} target="_blank" rel="noopener" aria-label="WhatsApp" id="footerWaLink">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm5.8 14.16c-.25.69-1.46 1.34-2 1.42-.51.07-1.16.1-1.87-.12-.43-.13-.99-.32-1.7-.63-2.99-1.29-4.95-4.3-5.1-4.5-.15-.2-1.22-1.62-1.22-3.09s.77-2.19 1.05-2.49c.27-.3.59-.37.79-.37l.57.01c.18 0 .43-.07.67.51.25.6.85 2.07.92 2.22.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.17-.31.39-.45.52-.15.15-.3.31-.13.61.17.3.76 1.25 1.63 2.02 1.12.99 2.06 1.3 2.36 1.45.3.15.47.12.65-.07.18-.2.74-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.71.81 2.01.96.3.15.5.22.57.35.07.12.07.72-.18 1.41Z"
+            ></path>
+          </svg>
+        </a>
+        <a href={mailHref} aria-label="E-mail" id="footerEmailLink">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm0 4 8 5 8-5V6l-8 5-8-5v2Z"
+            ></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <nav class="footer-links" aria-label="Links rápidos">
+      <h4>Navegação</h4>
+      <ul>
+        <li><a href="/#inicio">Início</a></li>
+        <li><a href="/#destaque">Imóvel em destaque</a></li>
+        <li><a href="/#imoveis">Imóveis</a></li>
+        <li><a href="/#sobre">Sobre</a></li>
+        <li><a href="/#contato">Contato</a></li>
+      </ul>
+    </nav>
+
+    <div class="footer-contact">
+      <h4>Contato</h4>
+      <ul>
+        <li>
+          <a href={telHref} id="footerPhoneLink">Tel.: <span id="footerPhone">{phoneText}</span></a>
+        </li>
+        <li>
+          <a href={waHref} target="_blank" rel="noopener" id="footerWaLink2"
+            >WhatsApp: <span id="footerWhatsapp">{whatsappText}</span></a
+          >
+        </li>
+        <li>
+          <a href={mailHref} id="footerEmailLink2"><span id="footerEmail">{c.email}</span></a>
+        </li>
+        <li>Cuiabá e região — MT</li>
+      </ul>
+      <a class="footer-admin-link" href="/admin">Área administrativa</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="container">
+      <p>© {year} Júlio — Consultor Imobiliário. Todos os direitos reservados.</p>
+    </div>
+  </div>
+</footer>
+
+<a
+  class="float-wa"
+  id="floatingWaLink"
+  href={waHref}
+  target="_blank"
+  rel="noopener"
+  aria-label="Falar no WhatsApp"
+>
+  <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true">
+    <path
+      fill="currentColor"
+      d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm5.8 14.16c-.25.69-1.46 1.34-2 1.42-.51.07-1.16.1-1.87-.12-.43-.13-.99-.32-1.7-.63-2.99-1.29-4.95-4.3-5.1-4.5-.15-.2-1.22-1.62-1.22-3.09s.77-2.19 1.05-2.49c.27-.3.59-.37.79-.37l.57.01c.18 0 .43-.07.67.51.25.6.85 2.07.92 2.22.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.17-.31.39-.45.52-.15.15-.3.31-.13.61.17.3.76 1.25 1.63 2.02 1.12.99 2.06 1.3 2.36 1.45.3.15.47.12.65-.07.18-.2.74-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.71.81 2.01.96.3.15.5.22.57.35.07.12.07.72-.18 1.41Z"
+    ></path>
+  </svg>
+</a>
+
+<style>
+  .site-footer {
+    background: #0c1322;
+    color: rgba(255, 255, 255, 0.78);
+    padding-top: 64px;
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1.2fr;
+    gap: 40px;
+    padding-bottom: 48px;
+  }
+
+  .site-footer .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    height: auto;
+    color: var(--white);
+    text-decoration: none;
+  }
+
+  .site-footer .brand-logo-img {
+    height: 74px;
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  }
+
+  .footer-slogan {
+    font-family: var(--ff-head);
+    font-style: italic;
+    color: var(--yellow);
+    margin: 18px 0 20px;
+    font-weight: 500;
+  }
+
+  .social {
+    display: flex;
+    gap: 12px;
+  }
+
+  .social a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--white);
+    transition:
+      background var(--transition),
+      transform var(--transition);
+  }
+
+  .social a:hover {
+    background: var(--red);
+    transform: translateY(-3px);
+  }
+
+  .footer-links h4,
+  .footer-contact h4 {
+    color: var(--white);
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+
+  .footer-links a,
+  .footer-contact a {
+    color: rgba(255, 255, 255, 0.78);
+    transition: color var(--transition);
+  }
+
+  .footer-links li,
+  .footer-contact li {
+    margin-bottom: 11px;
+    font-size: 0.95rem;
+  }
+
+  .footer-links a:hover,
+  .footer-contact a:hover {
+    color: var(--yellow);
+  }
+
+  .footer-admin-link {
+    display: inline-flex;
+    margin-top: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.66);
+  }
+
+  .footer-admin-link:hover {
+    color: var(--yellow);
+  }
+
+  .footer-bottom {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 22px 0;
+  }
+
+  .footer-bottom p {
+    margin: 0;
+    text-align: center;
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .float-wa {
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    z-index: 90;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: #25d366;
+    color: var(--white);
+    border-radius: 50%;
+    box-shadow: 0 10px 24px rgba(37, 211, 102, 0.32);
+    transition:
+      transform var(--transition),
+      background var(--transition);
+    animation: floatPulse 2.6s ease-in-out infinite;
+  }
+
+  .float-wa:hover {
+    background: #128c7e;
+    transform: scale(1.08);
+  }
+
+  @keyframes floatPulse {
+    0%,
+    100% {
+      box-shadow:
+        0 10px 24px rgba(37, 211, 102, 0.32),
+        0 0 0 0 rgba(37, 211, 102, 0.4);
+    }
+
+    50% {
+      box-shadow:
+        0 10px 24px rgba(37, 211, 102, 0.32),
+        0 0 0 14px rgba(37, 211, 102, 0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .float-wa {
+      animation: none;
+    }
+  }
+
+  @media (max-width: 980px) {
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    .footer-brand {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .site-footer {
+      padding-top: 44px;
+      padding-bottom: 74px;
+    }
+
+    .footer-grid {
+      grid-template-columns: 1fr;
+      gap: 30px;
+      padding-bottom: 34px;
+    }
+
+    .site-footer .brand {
+      align-items: flex-start;
+    }
+
+    .footer-slogan {
+      margin: 14px 0 16px;
+    }
+
+    .footer-links h4,
+    .footer-contact h4 {
+      margin-bottom: 12px;
+    }
+
+    .footer-links li,
+    .footer-contact li {
+      margin-bottom: 9px;
+      overflow-wrap: anywhere;
+    }
+
+    .footer-bottom {
+      padding: 18px 0;
+    }
+
+    .float-wa {
+      width: 54px;
+      height: 54px;
+      bottom: 16px;
+      right: 16px;
+    }
+  }
+</style>

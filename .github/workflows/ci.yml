@@ -1,0 +1,61 @@
+# Workflow de integração contínua
+# Executa o pipeline completo de validação (lint → format:check → typecheck →
+# astro check → vitest → security:public-artifacts) em todo push e pull_request
+# direcionados às branches principais.
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+# Permissão mínima: apenas leitura do repositório.
+# Nenhuma escrita em código, packages ou deployments é necessária aqui.
+permissions:
+  contents: read
+
+# Cancela runs anteriores do mesmo ref para economizar minutos de CI.
+# Em pull_requests isso evita rodar o pipeline em commits intermediários.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout do código
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Configura Node 22 LTS e habilita cache do npm via package-lock.json.
+      #    O cache só funciona quando há lockfile commitado — que é o caso aqui
+      #    (package-lock.json v3, lockfileVersion 3, npm 7+).
+      #    Nota: @types/node ^25 é uma dependência de tipo em tempo de compilação;
+      #    o runtime de CI passa a ser Node 22 LTS conforme exigência do Astro v6.
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      # 3. Instala dependências de forma determinística a partir do lockfile.
+      #    `npm ci` apaga node_modules antes de instalar, garantindo
+      #    reprodutibilidade total e evitando dependências fantasma.
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Executa o pipeline completo de validação:
+      #    lint → format:check → typecheck → astro check → vitest run
+      #    → security:public-artifacts
+      #    O job falha imediatamente se qualquer etapa retornar código != 0.
+      - name: Run validate
+        run: npm run validate

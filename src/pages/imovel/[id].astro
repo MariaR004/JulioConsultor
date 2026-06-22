@@ -1,0 +1,1309 @@
+---
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { getPropertyById, getPropertyBySlug, getContactSettings } from "@/lib/propertyData";
+import { SITE_ORIGIN } from "@/lib/env";
+import { safeJsonScript } from "@/lib/safeJson";
+import { ERROR_CACHE_CONTROL, PUBLIC_CACHE_CONTROL } from "@/lib/server/publicData";
+import {
+  toLegacyProperty,
+  normalizeContact,
+  publicFeatureLabels,
+  legacyWhatsappBase
+} from "@/lib/viewModel";
+
+// Renderizado no servidor a cada visita para que imóveis cadastrados no painel
+// fiquem acessíveis imediatamente, sem precisar de novo build/deploy.
+export const prerender = false;
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// O parâmetro da rota agora é o slug do imóvel. Mantemos suporte a UUID para
+// links antigos (Google, sitemap anterior, compartilhamentos no WhatsApp).
+const param = Astro.params.id || "";
+const isUuid = UUID_PATTERN.test(param);
+const dbProperty = isUuid ? await getPropertyById(param) : await getPropertyBySlug(param);
+
+// Acesso por UUID que já tem slug: redireciona (301) para a URL canônica legível.
+if (isUuid && dbProperty?.slug) {
+  return Astro.redirect(`/imovel/${dbProperty.slug}`, 301);
+}
+
+const dbContact = await getContactSettings();
+const contact = normalizeContact(dbContact);
+
+const notFound = !dbProperty;
+
+const siteOrigin = Astro.site ?? new URL(SITE_ORIGIN);
+const canonicalUrl = new URL(Astro.url.pathname, siteOrigin).toString();
+const toAbsolute = (url: string) =>
+  /^https?:\/\//i.test(url) ? url : new URL(url, siteOrigin).toString();
+
+// Valores padrão usados quando o imóvel não existe mais (link antigo/expirado).
+let property: ReturnType<typeof toLegacyProperty> | null = null;
+let featureLabels: string[] = [];
+let photos: string[] = [];
+let thumbs: string[] = [];
+let hasGallery = false;
+let tagClass = "venda";
+let mapSrc = "https://www.google.com/maps?q=Cuiab%C3%A1%20MT&output=embed";
+let pageTitle = "Imóvel não disponível — Júlio | Consultor Imobiliário";
+let pageDescription =
+  "Este imóvel não está mais disponível. Fale com o Júlio para ver outras opções em Cuiabá e região.";
+let pageOgImage = "/img/og-julio.jpg";
+let listingJsonLd: Record<string, unknown> | null = null;
+
+if (dbProperty) {
+  property = toLegacyProperty(dbProperty);
+  featureLabels = publicFeatureLabels(property);
+  photos = property.photoCards || property.photos || [];
+  thumbs = property.photoThumbs || property.photos || [];
+  hasGallery = photos.length > 1;
+  tagClass = property.type === "Aluguel" ? "aluguel" : "venda";
+
+  const buildMapQuery = (item: NonNullable<typeof property>) =>
+    [item.street, item.number, item.neighborhood, item.city, item.state, item.postalCode]
+      .filter(Boolean)
+      .join(" ");
+  mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(buildMapQuery(property) || "Cuiabá MT")}&output=embed`;
+
+  // SEO dynamic meta parameters
+  pageTitle = `${property.title} — Júlio | Consultor Imobiliário`;
+  pageDescription = property.description
+    ? property.description.substring(0, 160)
+    : `Confira os detalhes deste imóvel: ${property.title} em ${property.location}.`;
+  pageOgImage = photos[0] || "/img/logo-nova-sem-fundo.png";
+
+  const priceValue =
+    typeof dbProperty.price_cents === "number"
+      ? (dbProperty.price_cents / 100).toFixed(2)
+      : undefined;
+
+  listingJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "RealEstateListing",
+    name: property.title,
+    description: pageDescription,
+    url: canonicalUrl,
+    image: photos.length ? photos.map(toAbsolute) : [toAbsolute("/img/og-julio.jpg")],
+    ...(dbProperty.updated_at ? { datePosted: dbProperty.updated_at } : {}),
+    ...(priceValue
+      ? {
+          offers: {
+            "@type": "Offer",
+            price: priceValue,
+            priceCurrency: "BRL",
+            availability: "https://schema.org/InStock",
+            businessFunction:
+              dbProperty.deal_type === "rent"
+                ? "http://purl.org/goodrelations/v1#LeaseOut"
+                : "http://purl.org/goodrelations/v1#Sell"
+          }
+        }
+      : {}),
+    about: {
+      "@type": "Accommodation",
+      numberOfRooms: dbProperty.bedrooms,
+      numberOfBathroomsTotal: dbProperty.bathrooms,
+      ...(typeof dbProperty.area_m2 === "number"
+        ? {
+            floorSize: {
+              "@type": "QuantitativeValue",
+              value: dbProperty.area_m2,
+              unitCode: "MTK"
+            }
+          }
+        : {}),
+      address: {
+        "@type": "PostalAddress",
+        ...(dbProperty.street
+          ? { streetAddress: [dbProperty.street, dbProperty.number].filter(Boolean).join(", ") }
+          : {}),
+        addressLocality: dbProperty.city || "Cuiabá",
+        addressRegion: dbProperty.state || "MT",
+        ...(dbProperty.postal_code ? { postalCode: dbProperty.postal_code } : {}),
+        addressCountry: "BR"
+      }
+    }
+  };
+}
+
+if (notFound) {
+  Astro.response.status = 404;
+  Astro.response.headers.set("X-Robots-Tag", "noindex");
+  Astro.response.headers.set("Cache-Control", ERROR_CACHE_CONTROL);
+} else {
+  Astro.response.headers.set("Cache-Control", PUBLIC_CACHE_CONTROL);
+}
+
+const unavailableWaHref = `${legacyWhatsappBase(contact)}?text=${encodeURIComponent(
+  "Olá Júlio! Vi um imóvel no seu site que não está mais disponível. Pode me ajudar a encontrar outras opções em Cuiabá e região?"
+)}`;
+---
+
+<BaseLayout
+  title={pageTitle}
+  description={pageDescription}
+  ogImage={pageOgImage}
+  noindex={notFound}
+  ogImageWidth={notFound ? 1024 : null}
+  ogImageHeight={notFound ? 1024 : null}
+  jsonLd={listingJsonLd}
+>
+  <Header scrolled contact={contact} />
+  {
+    !property ? (
+      <main class="property-detail-page">
+        <div class="container">
+          <div class="property-unavailable">
+            <span class="pu-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="34" height="34">
+                <path fill="currentColor" d="M12 3 2 11h3v9h6v-6h2v6h6v-9h3L12 3Z" />
+              </svg>
+            </span>
+            <h1>Este imóvel não está mais disponível</h1>
+            <p>
+              O anúncio que você procura pode ter sido vendido, alugado ou retirado. Mas calma — o
+              Júlio tem outras ótimas oportunidades em Cuiabá e região.
+            </p>
+            <div class="pu-actions">
+              <a class="btn btn-primary btn-lg" href="/#imoveis">
+                Ver outros imóveis
+              </a>
+              <a
+                class="btn btn-whatsapp btn-lg"
+                href={unavailableWaHref}
+                target="_blank"
+                rel="noopener"
+              >
+                <svg class="ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path
+                    fill="currentColor"
+                    d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Z"
+                  />
+                </svg>
+                Falar com o Júlio
+              </a>
+            </div>
+          </div>
+        </div>
+      </main>
+    ) : (
+      <main class="property-detail-page">
+        <div class="container">
+          <div class="property-breadcrumbs">
+            <a href="/#imoveis" class="back-link">
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                aria-hidden="true"
+                style="vertical-align: middle; margin-right: 4px;"
+              >
+                <path
+                  fill="currentColor"
+                  d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2Z"
+                />
+              </svg>
+              Voltar para a lista de imóveis
+            </a>
+          </div>
+
+          <section class="property-showcase" id="propertyShowcase">
+            <div class="pm-gallery">
+              <div class:list={["pm-main-photo", { placeholder: !photos.length }]}>
+                {photos.length > 0 && (
+                  <div
+                    class="pm-carousel-track"
+                    id="carouselTrack"
+                    style="transform: translateX(0%);"
+                  >
+                    {photos.map((photo, index) => (
+                      <div class="pm-carousel-slide">
+                        {index === 0 ? (
+                          <img
+                            src={photo}
+                            srcset={`${thumbs[index] || photo} 320w, ${photo} 800w`}
+                            sizes="(max-width: 760px) 100vw, min(100vw, 920px)"
+                            alt={property.title}
+                            loading="eager"
+                          />
+                        ) : (
+                          <img
+                            data-src={photo}
+                            data-srcset={`${thumbs[index] || photo} 320w, ${photo} 800w`}
+                            sizes="(max-width: 760px) 100vw, min(100vw, 920px)"
+                            alt={property.title}
+                            loading="lazy"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {hasGallery && (
+                  <>
+                    <button
+                      class="pm-nav prev"
+                      type="button"
+                      data-detail-gallery="prev"
+                      aria-label="Foto anterior"
+                    >
+                      &lsaquo;
+                    </button>
+                    <button
+                      class="pm-nav next"
+                      type="button"
+                      data-detail-gallery="next"
+                      aria-label="Próxima foto"
+                    >
+                      &rsaquo;
+                    </button>
+                    <span class="pm-counter" id="carouselCounter">
+                      1 / {photos.length}
+                    </span>
+                  </>
+                )}
+              </div>
+              {photos.length > 0 && (
+                <div class="pm-thumbs">
+                  {thumbs.map((photo, index) => (
+                    <button
+                      class:list={["pm-thumb", { active: index === 0 }]}
+                      type="button"
+                      data-detail-photo={index}
+                      aria-label={`Ver foto ${index + 1}`}
+                    >
+                      <img src={photo} alt="" loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <div class="property-info-grid">
+            <main class="property-main-info" id="propertyMainInfo">
+              <div class="info-header">
+                <span class="pm-type">{property.type}</span>
+                <h1>{property.title}</h1>
+                <p class="pm-location">
+                  <svg class="ico" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                    <path
+                      fill="currentColor"
+                      d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"
+                    />
+                  </svg>
+                  {property.location}
+                </p>
+              </div>
+              <div class="pm-specs">
+                <span>
+                  <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <path
+                      fill="currentColor"
+                      d="M21 10V7a2 2 0 0 0-2-2h-5v3h-4V5H5a2 2 0 0 0-2 2v3a3 3 0 0 0 0 6v3h2v-2h14v2h2v-3a3 3 0 0 0 0-6Z"
+                    />
+                  </svg>
+                  <strong>{property.beds}</strong> Quartos
+                  {property.suites > 0 &&
+                    ` (${property.suites} ${property.suites === 1 ? "Suíte" : "Suítes"})`}
+                </span>
+                <span>
+                  <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <path
+                      fill="currentColor"
+                      d="M7 4a3 3 0 0 0-3 3v5H3a1 1 0 0 0 0 2h1v1a4 4 0 0 0 2 3.46V20a1 1 0 0 0 2 0v-1h8v1a1 1 0 0 0 2 0v-1.54A4 4 0 0 0 20 15v-1h1a1 1 0 0 0 0-2h-9V7a1 1 0 0 1 2 0 1 1 0 0 0 2 0 3 3 0 0 0-6 0v5H6V7a1 1 0 0 1 1-1 1 1 0 0 0 0-2Z"
+                    />
+                  </svg>
+                  <strong>{property.baths}</strong> banheiros
+                </span>
+                <span>
+                  <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <path
+                      fill="currentColor"
+                      d="M5 11 6.5 6.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h1a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-1v1a1 1 0 0 1-2 0v-1H7v1a1 1 0 0 1-2 0v-1H4a1 1 0 0 1-1-1h1Zm2.2 0h9.6l-1-3H8.2l-1 3Z"
+                    />
+                  </svg>
+                  <strong>{property.parking}</strong> vagas
+                </span>
+                <span>
+                  <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <path
+                      fill="currentColor"
+                      d="M3 3h8v8H3V3Zm10 0h8v8h-8V3ZM3 13h8v8H3v-8Zm10 0h8v8h-8v-8Z"
+                    />
+                  </svg>
+                  <strong>{property.area}</strong> m²
+                </span>
+              </div>
+              <div class="info-section">
+                <h3>Descrição do imóvel</h3>
+                <p class="pm-description">
+                  {property.description ||
+                    "Fale com o Júlio para receber a descrição completa deste imóvel."}
+                </p>
+              </div>
+              <div class="pm-features info-section">
+                <h3>Diferenciais</h3>
+                <ul>
+                  {featureLabels.map((feature) => (
+                    <li>{feature}</li>
+                  ))}
+                </ul>
+              </div>
+              <div class="pm-map info-section">
+                <h3>Localização aproximada</h3>
+                <iframe
+                  title={`Mapa de ${property.title}`}
+                  src={mapSrc}
+                  loading="lazy"
+                  allowfullscreen
+                  referrerpolicy="no-referrer-when-downgrade"
+                />
+              </div>
+            </main>
+            <aside class="property-sidebar" id="propertySidebar">
+              <div class="sticky-contact-card">
+                <div class="card-price-section">
+                  <span class="card-price-label">Valor do imóvel</span>
+                  <strong class="card-price">{property.price}</strong>
+                  <span class:list={["card-tag", tagClass]}>{property.type}</span>
+                </div>
+                <form class="contact-form-sidebar" id="sidebarContactForm" novalidate>
+                  <h4>Gostou deste imóvel?</h4>
+                  <p>Fale diretamente com o Júlio enviando uma mensagem no WhatsApp.</p>
+                  <div class="field">
+                    <label for="leadName">Nome</label>
+                    <input
+                      type="text"
+                      id="leadName"
+                      name="nome"
+                      placeholder="Seu nome completo"
+                      required
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="leadPhone">WhatsApp / Telefone</label>
+                    <input
+                      type="tel"
+                      id="leadPhone"
+                      name="telefone"
+                      placeholder="(65) 90000-0000"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    class="btn btn-whatsapp btn-block btn-lg"
+                    id="submitLeadBtn"
+                  >
+                    <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                      <path
+                        fill="currentColor"
+                        d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Z"
+                      />
+                    </svg>
+                    Enviar proposta
+                  </button>
+                </form>
+                <div class="broker-info-card">
+                  <div class="broker-profile">
+                    <img
+                      src="/img/logo-nova-sem-fundo.png"
+                      alt="Júlio Consultor Imobiliário"
+                      class="broker-logo"
+                    />
+                    <div>
+                      <h5>Júlio</h5>
+                      <p>Consultor Imobiliário</p>
+                      <span class="broker-creci">CRECI-F 3098</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </main>
+    )
+  }
+  <Footer contact={contact} />
+  <style is:global>
+    /* ============ PROPERTY DETAIL PAGE ============ */
+    .property-detail-page {
+      padding-top: calc(var(--header-h) + 18px);
+      padding-bottom: 80px;
+      background: var(--offwhite);
+      min-height: 80vh;
+    }
+
+    /* Imóvel inexistente/expirado */
+    .property-unavailable {
+      max-width: 560px;
+      margin: clamp(24px, 8vw, 80px) auto;
+      padding: clamp(28px, 5vw, 48px);
+      text-align: center;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .property-unavailable .pu-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      margin-bottom: 20px;
+      border-radius: 20px;
+      background: var(--yellow-soft);
+      color: var(--blue);
+    }
+
+    .property-unavailable h1 {
+      font-size: clamp(1.4rem, 4vw, 1.9rem);
+      color: var(--blue-deep);
+      margin: 0 0 12px;
+    }
+
+    .property-unavailable p {
+      color: var(--muted);
+      margin: 0 0 28px;
+      font-size: 1.02rem;
+    }
+
+    .property-unavailable .pu-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    @media (max-width: 480px) {
+      .property-unavailable .pu-actions .btn {
+        width: 100%;
+      }
+    }
+
+    .property-breadcrumbs {
+      margin-bottom: 24px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--blue);
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color var(--transition);
+    }
+
+    .back-link:hover {
+      color: var(--red);
+    }
+
+    /* Photo Showcase */
+    .property-showcase .pm-gallery {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+
+    .property-showcase .pm-main-photo {
+      position: relative;
+      aspect-ratio: 16 / 8.4;
+      max-height: 560px;
+      width: 100%;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: linear-gradient(135deg, var(--blue), var(--blue-deep));
+    }
+
+    .property-showcase .pm-main-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .pm-carousel-track {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .pm-carousel-slide {
+      flex: 0 0 100%;
+      width: 100%;
+      height: 100%;
+    }
+
+    .pm-nav {
+      position: absolute;
+      top: 50%;
+      z-index: 2;
+      width: 44px;
+      height: 44px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(12, 19, 34, 0.74);
+      color: var(--white);
+      font-size: 1.8rem;
+      line-height: 1;
+      cursor: pointer;
+      transform: translateY(-50%);
+    }
+
+    .pm-nav.prev {
+      left: 14px;
+    }
+
+    .pm-nav.next {
+      right: 14px;
+    }
+
+    .pm-counter {
+      position: absolute;
+      right: 14px;
+      bottom: 14px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      background: rgba(12, 19, 34, 0.76);
+      color: var(--white);
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    .property-showcase .pm-thumbs {
+      display: flex;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: thin;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .property-showcase .pm-thumb {
+      flex: 0 0 82px;
+    }
+
+    .pm-thumb {
+      aspect-ratio: 1;
+      border: 3px solid transparent;
+      border-radius: 10px;
+      overflow: hidden;
+      padding: 0;
+      background: var(--white);
+      cursor: pointer;
+    }
+
+    .pm-thumb.active {
+      border-color: var(--yellow);
+    }
+
+    .pm-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Info Grid */
+    .property-info-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 40px;
+      align-items: start;
+    }
+
+    .property-main-info {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .info-header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+    }
+
+    .info-header h1 {
+      font-size: 2.2rem;
+      margin: 10px 0 8px;
+      font-family: var(--ff-head);
+      color: var(--text);
+      line-height: 1.25;
+    }
+
+    .info-section {
+      border-top: 1px solid var(--border);
+      padding-top: 32px;
+    }
+
+    .info-section h3 {
+      font-size: 1.25rem;
+      font-family: var(--ff-head);
+      margin-bottom: 16px;
+      color: var(--blue-deep);
+    }
+
+    .pm-type {
+      display: inline-flex;
+      padding: 6px 13px;
+      border-radius: 999px;
+      background: var(--yellow-soft);
+      color: var(--blue-deep);
+      font-family: var(--ff-head);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .pm-location {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--blue);
+      font-weight: 700;
+      margin: 0 0 18px;
+    }
+
+    .property-main-info .pm-specs {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .property-main-info .pm-specs span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--offwhite);
+      font-size: 0.92rem;
+      white-space: nowrap;
+    }
+
+    .property-main-info .pm-specs svg {
+      color: var(--blue);
+    }
+
+    .pm-description {
+      color: var(--muted);
+      margin: 0 0 22px;
+    }
+
+    .property-main-info .pm-features ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+
+    .property-main-info .pm-features li {
+      padding: 10px 16px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--white);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 0.9rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .property-main-info .pm-map iframe {
+      display: block;
+      width: 100%;
+      min-height: 350px;
+      border: 0;
+      border-radius: var(--radius);
+      background: var(--offwhite);
+    }
+
+    /* Sticky Contact Sidebar */
+    .property-sidebar {
+      position: sticky;
+      top: calc(var(--header-h) + 24px);
+      z-index: 10;
+    }
+
+    .sticky-contact-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .card-price-section {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+    }
+
+    .card-price-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .card-price {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: var(--blue-deep);
+      font-family: var(--ff-head);
+    }
+
+    .card-tag {
+      align-self: flex-start;
+      margin-top: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--white);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-tag.venda {
+      background: var(--red);
+    }
+
+    .card-tag.aluguel {
+      background: var(--blue);
+    }
+
+    .contact-form-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .contact-form-sidebar h4 {
+      font-size: 1.15rem;
+      font-family: var(--ff-head);
+      margin: 0;
+      color: var(--text);
+    }
+
+    .contact-form-sidebar p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .contact-form-sidebar .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .contact-form-sidebar .field label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .contact-form-sidebar .field input {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: var(--ff-body);
+      font-size: 0.95rem;
+      outline: none;
+      transition:
+        border var(--transition),
+        box-shadow var(--transition);
+      width: 100%;
+    }
+
+    .contact-form-sidebar .field input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.15);
+    }
+
+    .broker-info-card {
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+    }
+
+    .broker-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .broker-logo {
+      height: 48px;
+      width: auto;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.06));
+    }
+
+    .broker-profile h5 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin: 0;
+      color: var(--text);
+    }
+
+    .broker-profile p {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .broker-creci {
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-weight: 600;
+      display: block;
+    }
+
+    /* ============ LIGHTBOX ============ */
+    body.lightbox-open {
+      overflow: hidden;
+    }
+
+    .lightbox-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      display: none;
+      background: rgba(10, 15, 30, 0.97);
+      backdrop-filter: blur(8px);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 76px 24px 24px;
+      user-select: none;
+    }
+
+    .lightbox-modal.open {
+      display: flex;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      width: 48px;
+      height: 48px;
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--white);
+      font-size: 2rem;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition:
+        background var(--transition),
+        transform var(--transition);
+      z-index: 510;
+    }
+
+    .lightbox-close:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: scale(1.05);
+    }
+
+    .lightbox-nav {
+      position: static;
+      width: 56px;
+      height: 56px;
+      border: 1px solid rgba(255, 255, 255, 0.82);
+      background: rgba(255, 255, 255, 0.94);
+      color: #0c1322;
+      font-size: 2.5rem;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
+      transition:
+        background var(--transition),
+        transform var(--transition),
+        box-shadow var(--transition);
+      z-index: 510;
+    }
+
+    .lightbox-nav:hover {
+      background: var(--white);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.38);
+    }
+
+    .lightbox-content {
+      position: relative;
+      width: 100%;
+      min-height: 0;
+      flex: 1 1 auto;
+      overflow: hidden;
+      touch-action: pan-y;
+    }
+
+    .lightbox-track {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .lightbox-slide {
+      flex: 0 0 100%;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .lightbox-slide img {
+      max-width: 90vw;
+      max-height: calc(100vh - 230px);
+      object-fit: contain;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      cursor: zoom-in;
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      pointer-events: auto;
+    }
+
+    .lightbox-slide img.zoomed {
+      transform: scale(2.2);
+      cursor: zoom-out;
+      transition: none;
+    }
+
+    .lightbox-controls {
+      position: relative;
+      z-index: 510;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: min(940px, 100%);
+    }
+
+    .lightbox-thumbs {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      padding: 2px 2px 8px;
+      scrollbar-width: thin;
+    }
+
+    .lightbox-thumb {
+      flex: 0 0 auto;
+      width: 76px;
+      height: 54px;
+      padding: 0;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.14);
+      cursor: pointer;
+      opacity: 0.68;
+      transition:
+        opacity var(--transition),
+        border-color var(--transition),
+        transform var(--transition);
+    }
+
+    .lightbox-thumb.active,
+    .lightbox-thumb:hover {
+      opacity: 1;
+      border-color: var(--yellow);
+      transform: translateY(-1px);
+    }
+
+    .lightbox-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .lightbox-actions {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .lightbox-counter {
+      color: rgba(255, 255, 255, 0.84);
+      font-family: var(--ff-head);
+      font-size: 0.95rem;
+      font-weight: 600;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 6px 16px;
+      border-radius: 999px;
+    }
+
+    .lightbox-hint {
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    /* ============ RESPONSIVE ============ */
+    @media (max-width: 992px) {
+      .property-showcase .pm-main-photo {
+        aspect-ratio: 16 / 10;
+      }
+
+      .property-info-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+
+      .property-main-info {
+        padding: 24px;
+        gap: 24px;
+      }
+
+      .property-main-info .pm-specs {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .property-sidebar {
+        position: static;
+      }
+
+      .sticky-contact-card {
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .property-showcase .pm-main-photo {
+        touch-action: pan-y;
+      }
+
+      .property-showcase .pm-nav {
+        display: none;
+      }
+
+      .lightbox-modal {
+        justify-content: center;
+        gap: 10px;
+        padding: 64px 12px 18px;
+      }
+
+      .lightbox-slide img {
+        max-width: 96vw;
+        max-height: calc(100vh - 178px);
+      }
+
+      .lightbox-thumbs {
+        gap: 6px;
+        padding-bottom: 6px;
+      }
+
+      .lightbox-thumb {
+        width: 62px;
+        height: 46px;
+        border-radius: 6px;
+      }
+
+      .lightbox-actions {
+        gap: 12px;
+      }
+
+      .lightbox-nav {
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.88);
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
+        font-size: 1.8rem;
+      }
+
+      .lightbox-nav:hover {
+        background: var(--white);
+      }
+
+      .lightbox-close {
+        top: 16px;
+        right: 16px;
+        width: 40px;
+        height: 40px;
+      }
+
+      .lightbox-hint {
+        display: none;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .property-detail-page {
+        padding-top: calc(var(--header-h) + 16px);
+        padding-bottom: 40px;
+      }
+
+      .property-breadcrumbs {
+        margin-bottom: 14px;
+      }
+
+      .property-showcase .pm-gallery {
+        padding: 0;
+        border-radius: var(--radius);
+        margin-bottom: 16px;
+      }
+
+      .property-showcase .pm-main-photo {
+        aspect-ratio: 4 / 3;
+        max-height: 260px;
+        border-radius: var(--radius) var(--radius) 0 0;
+        touch-action: pan-y;
+      }
+
+      .property-showcase .pm-thumbs {
+        gap: 6px;
+        margin: 8px 12px 12px;
+        padding-bottom: 4px;
+      }
+
+      .property-showcase .pm-thumb {
+        flex-basis: 56px;
+      }
+
+      .property-info-grid {
+        gap: 14px;
+      }
+
+      .property-main-info {
+        padding: 18px 16px;
+        gap: 18px;
+        border-radius: var(--radius);
+      }
+
+      .info-header {
+        padding-bottom: 14px;
+      }
+
+      .info-header h1 {
+        font-size: 1.35rem;
+        margin: 6px 0 6px;
+        line-height: 1.2;
+      }
+
+      .info-section {
+        padding-top: 18px;
+      }
+
+      .info-section h3 {
+        font-size: 1rem;
+        margin-bottom: 10px;
+      }
+
+      .property-main-info .pm-specs {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+
+      .property-main-info .pm-specs span {
+        padding: 8px 10px;
+        font-size: 0.82rem;
+        white-space: normal;
+      }
+
+      .property-main-info .pm-features ul {
+        gap: 6px;
+      }
+
+      .property-main-info .pm-features li {
+        padding: 7px 12px;
+        font-size: 0.82rem;
+      }
+
+      .property-main-info .pm-map iframe {
+        min-height: 220px;
+      }
+
+      .sticky-contact-card {
+        padding: 16px;
+        gap: 14px;
+        border-radius: var(--radius);
+      }
+
+      .card-price-section {
+        padding-bottom: 12px;
+      }
+
+      .card-price {
+        font-size: 1.65rem;
+      }
+
+      .contact-form-sidebar {
+        gap: 10px;
+      }
+
+      .contact-form-sidebar h4 {
+        font-size: 1rem;
+      }
+
+      .contact-form-sidebar .field input {
+        padding: 10px 12px;
+        font-size: 0.88rem;
+      }
+
+      .broker-info-card {
+        padding-top: 12px;
+      }
+
+      .broker-logo {
+        height: 38px;
+      }
+    }
+  </style>
+  {
+    property && (
+      <script
+        is:inline
+        type="application/json"
+        id="__INITIAL_DATA__"
+        set:html={safeJsonScript({ property, contact })}
+      />
+    )
+  }
+  <script>
+    import "@/scripts/property-detail";
+  </script>
+</BaseLayout>
