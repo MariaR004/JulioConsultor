@@ -53,6 +53,8 @@ let pageDescription =
   "Este imóvel não está mais disponível. Fale com o Júlio para ver outras opções em Cuiabá e região.";
 let pageOgImage = "/img/og-julio.jpg";
 let listingJsonLd: Record<string, unknown> | null = null;
+// Preço numérico (ex.: "1800.00") usado nas meta tags Open Graph de produto.
+let productPrice: string | null = null;
 
 if (dbProperty) {
   property = toLegacyProperty(dbProperty);
@@ -79,6 +81,7 @@ if (dbProperty) {
     typeof dbProperty.price_cents === "number"
       ? (dbProperty.price_cents / 100).toFixed(2)
       : undefined;
+  productPrice = priceValue ?? null;
 
   listingJsonLd = {
     "@context": "https://schema.org",
@@ -146,6 +149,9 @@ const unavailableWaHref = `${legacyWhatsappBase(contact)}?text=${encodeURICompon
   title={pageTitle}
   description={pageDescription}
   ogImage={pageOgImage}
+  ogType={notFound ? "website" : "product"}
+  productPrice={notFound ? null : productPrice}
+  productCurrency={!notFound && productPrice ? "BRL" : null}
   noindex={notFound}
   ogImageWidth={notFound ? 1024 : null}
   ogImageHeight={notFound ? 1024 : null}

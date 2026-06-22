@@ -93,7 +93,13 @@ const heroPreload = {
 };
 ---
 
-<BaseLayout preloadImage={heroPreload} jsonLd={homeJsonLd}>
+<BaseLayout
+  preloadImage={heroPreload}
+  jsonLd={homeJsonLd}
+  ogImage="/img/og-home.jpg"
+  ogImageWidth={256}
+  ogImageHeight={256}
+>
   <Header contact={contact} />
   <main>
     <section class="hero" id="inicio">

@@ -78,11 +78,11 @@ As variáveis iniciadas com `PUBLIC_` são embutidas pelo Astro durante o build.
 | ------------------------------ | -------------------------------------------------- | ----- |
 | `PUBLIC_SUPABASE_URL`          | `https://byxqgsfbnyhgczrssyxm.supabase.co`         | Texto |
 | `PUBLIC_SUPABASE_ANON_KEY`     | a anon key do Supabase (Project Settings > API)    | Texto |
-| `PUBLIC_SITE_URL`              | `https://julio-consultor.<subdominio>.workers.dev` | Texto |
+| `PUBLIC_SITE_URL`              | `https://corretor.<subdominio>.workers.dev` | Texto |
 | `PUBLIC_AUTH_CAPTCHA_PROVIDER` | `turnstile`                                        | Texto |
 | `PUBLIC_AUTH_CAPTCHA_SITE_KEY` | a site key do widget Turnstile                     | Texto |
 
-> **Atenção:** `PUBLIC_SITE_URL` deve conter a URL final do seu Worker (ex: `https://julio-consultor.seu-subdominio.workers.dev` ou seu domínio próprio).
+> **Atenção:** `PUBLIC_SITE_URL` deve conter a URL final do seu Worker (ex: `https://corretor.seu-subdominio.workers.dev` ou seu domínio próprio).
 
 Para a chave secreta `SUPABASE_SERVICE_ROLE_KEY`, ela é acessada apenas no servidor e deve ser configurada diretamente no Cloudflare como um **Segredo (Secret)**:
 
@@ -113,7 +113,7 @@ npx wrangler deploy
 O CAPTCHA protege o login do admin contra força bruta. É gratuito:
 
 1. No dashboard do Cloudflare, vá em **Turnstile > Add widget**.
-2. **Hostnames permitidos**: adicione `julio-consultor.<subdominio>.workers.dev` (e
+2. **Hostnames permitidos**: adicione `corretor.<subdominio>.workers.dev` (e
    `localhost` + `127.0.0.1` se quiser testar o CAPTCHA localmente).
 3. Modo: **Managed** (recomendado).
 4. Ao criar, o Cloudflare mostra duas chaves:
@@ -127,7 +127,7 @@ O CAPTCHA protege o login do admin contra força bruta. É gratuito:
 
 ## 5. Depois do deploy — testes de fumaça
 
-Acesse `https://julio-consultor.<subdominio>.workers.dev` e verifique:
+Acesse `https://corretor.<subdominio>.workers.dev` e verifique:
 
 1. **Home** carrega com a lista de imóveis.
 2. **Clicar em um imóvel** abre a página de detalhe (renderizada no servidor).
