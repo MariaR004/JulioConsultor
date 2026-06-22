@@ -74,13 +74,13 @@ O arquivo `wrangler.json` na raiz do projeto já está configurado. O build do A
 
 As variáveis iniciadas com `PUBLIC_` são embutidas pelo Astro durante o build. Crie ou edite o arquivo `.env` localmente antes de rodar o build:
 
-| Variável                       | Valor                                              | Tipo  |
-| ------------------------------ | -------------------------------------------------- | ----- |
-| `PUBLIC_SUPABASE_URL`          | `https://byxqgsfbnyhgczrssyxm.supabase.co`         | Texto |
-| `PUBLIC_SUPABASE_ANON_KEY`     | a anon key do Supabase (Project Settings > API)    | Texto |
-| `PUBLIC_SITE_URL`              | `https://corretor.<subdominio>.workers.dev` | Texto |
-| `PUBLIC_AUTH_CAPTCHA_PROVIDER` | `turnstile`                                        | Texto |
-| `PUBLIC_AUTH_CAPTCHA_SITE_KEY` | a site key do widget Turnstile                     | Texto |
+| Variável                       | Valor                                           | Tipo  |
+| ------------------------------ | ----------------------------------------------- | ----- |
+| `PUBLIC_SUPABASE_URL`          | `https://byxqgsfbnyhgczrssyxm.supabase.co`      | Texto |
+| `PUBLIC_SUPABASE_ANON_KEY`     | a anon key do Supabase (Project Settings > API) | Texto |
+| `PUBLIC_SITE_URL`              | `https://corretor.<subdominio>.workers.dev`     | Texto |
+| `PUBLIC_AUTH_CAPTCHA_PROVIDER` | `turnstile`                                     | Texto |
+| `PUBLIC_AUTH_CAPTCHA_SITE_KEY` | a site key do widget Turnstile                  | Texto |
 
 > **Atenção:** `PUBLIC_SITE_URL` deve conter a URL final do seu Worker (ex: `https://corretor.seu-subdominio.workers.dev` ou seu domínio próprio).
 
